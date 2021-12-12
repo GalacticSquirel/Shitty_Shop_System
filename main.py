@@ -1,10 +1,9 @@
 import tkinter as tk
-import time
-import tkinter.font as tkFont
-import time
 import os
 from tkinter import *
-
+import enchant
+d = enchant.Dict("en_GB")
+from tkinter import messagebox
 class App(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
@@ -92,6 +91,8 @@ class User(tk.Frame):
 
 class Admin(tk.Frame):
     def __init__(self, master):
+        global items
+        global prices
         tk.Frame.__init__(self, master)
         class EditableListbox(tk.Listbox):
             tk.Frame.__init__(self, master)
@@ -177,17 +178,15 @@ class Admin(tk.Frame):
                 with open("prices.txt","w+") as f:
                     f.write(",".join(items))
                 event.widget.destroy()
-        
 
-        
         self.actual = EditableListbox(app)
         self.scrollbar = tk.Scrollbar(app, command=self.yview)
         self.actual.configure(yscrollcommand=self.yscroll1)
         self.price = EditableListbox2(app)
         self.price.configure(yscrollcommand=self.yscroll2)
-        self.actual.place(height=200,relwidth=0.78,x=5,y=50)
-        self.scrollbar.place(x=480, y=50,height=200)
-        self.price.place(height=200,relwidth=0.2,x=380,y=50)
+        self.actual.place(height=340,width=375,x=5,y=40)
+        self.scrollbar.place(x=480, y=40,height=340)
+        self.price.place(height=340,width=100,x=380,y=40)
         with open("items.txt", encoding='utf8') as f:
             items = f.read().split(",")
         for i in items:
@@ -227,10 +226,63 @@ class Admin(tk.Frame):
             for item in data:
                 self.price.insert("end",item)
         entry = Entry(self)
-        entry.place(width=420,x=60,y=25)
+        entry.place(width=420,x=60,y=5)
         entry.bind('<KeyRelease>', Scankey)
-        label1 = Label(text="Search:")
-        label1.place(x=5,y=25)
+        searchlabel = Label(text="Search:")
+        searchlabel.place(x=5,y=5)
+        def insert(item,price,items):
+            try:
+                if d.check(item) == True and "".join(price.split(".")).isdigit():
+                    if not item.lower() in items:
+                        self.actual.insert('end', item.capitalize())
+                        self.price.insert('end', price)
+                        self.actual.see(self.actual.size())
+                        with open("items.txt", encoding='utf8') as f:
+                            items = f.read().split(",")
+                        items.append(item)
+                        with open("items.txt","w+") as f:
+                            f.write(",".join(items))
+                        with open("prices.txt", encoding='utf8') as f:
+                            prices = f.read().split(",")
+                        prices.append(price)
+                        with open("prices.txt","w+") as f:
+                            f.write(",".join(prices))
+                        item_entry.delete(0,END)
+                        price_entry.delete(0,END)
+                    else:
+                        messagebox.showerror('Python Error', 'Error: Item Already in List')
+                elif d.check(item) == False:
+                    messagebox.showerror('Python Error', 'Error: Item to Insert is Not a Word')
+                elif not "".join(price.split(".")).isdigit():
+                    messagebox.showerror('Python Error', 'Error: Price to Insert is Not a Valid Number or is Empty')
+            except ValueError:
+                messagebox.showerror('Python Error', 'Error: Can Not Insert Empty Item')
+        def delete():
+            for i in self.actual.curselection():
+                self.actual.delete(i)
+                self.price.delete(i)
+                with open("items.txt", encoding='utf8') as f:
+                    items = f.read().split(",")
+                    del items[i]
+                with open("items.txt","w+") as f:
+                    f.write(",".join(items))
+                with open("prices.txt", encoding='utf8') as f:
+                    prices = f.read().split(",")
+                    del prices[i]
+                with open("prices.txt","w+") as f:
+                    f.write(",".join(prices))
+                
+
+        item_entry = Entry(self)
+        item_entry.place(width=295,x=5,y=400)
+        price_entry = Entry(self)
+        price_entry.place(width=130,x=305,y=400)
+        insert_btn = Button(text="Insert",command=lambda:insert(item_entry.get().strip(),price_entry.get().strip(),items))
+        insert_btn.place(height=20,width=50,x=440,y=400)
+        delete_btn = Button(text="Delete Selected",command=delete)
+        delete_btn.place(width=490,x=5,y=430)
+        start_button = tk.Button(self, text="Mode Select", command=lambda: master.switch_frame(StartPage))
+        start_button.place(width=490,x=5,y=465)
 
     def yscroll1(self, *args):
         if self.price.yview() != self.actual.yview():
