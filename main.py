@@ -79,14 +79,92 @@ class StartPage(tk.Frame):
 
 class User(tk.Frame):
     def __init__(self, master):
+        global items
+        global prices
         tk.Frame.__init__(self, master)
-        self.master = master
-        self.pack(fill=BOTH, expand=1)
+        class EditableListbox(tk.Listbox):
+            tk.Frame.__init__(self, master)
+            def __init__(self, master, **kwargs):
+                super().__init__(master, **kwargs)
+                self.edit_item = None
+                
+        class EditableListbox2(tk.Listbox):
+            tk.Frame.__init__(self, master)
+            def __init__(self, master, **kwargs):
+                super().__init__(master, **kwargs)
+                self.edit_item = None
 
-        page_1_label = tk.Label(self, text="Mode Select")
-        start_button = tk.Button(self, text="Mode Select", command=lambda: master.switch_frame(StartPage))
-        page_1_label.pack(side="top", fill="x", pady=10)
-        start_button.pack()
+
+        self.actual = Listbox(app)
+        self.scrollbar = tk.Scrollbar(app, command=self.yview)
+        self.actual.configure(yscrollcommand=self.yscroll1)
+        self.price = Listbox(app)
+        self.price.configure(yscrollcommand=self.yscroll2)
+        self.actual.place(height=340,width=375,x=5,y=40)
+        self.scrollbar.place(x=480, y=40,height=340)
+        self.price.place(height=340,width=100,x=380,y=40)
+
+        with open("items.txt", encoding='utf8') as f:
+            items = f.read().split(",")
+        for i in items:
+            self.actual.insert("end", i.capitalize())
+
+        with open("prices.txt", encoding='utf8') as f:
+            prices = f.read().split(",")
+        for i in prices:
+            self.price.insert("end", i)
+
+        def Scankey(event):
+            val = event.widget.get()
+            print(val)
+            if val == '':
+                data = items
+                prices_to_show = prices
+            else:
+                data = []
+                for item in items:
+                    if val.lower() in item.lower():
+                        data.append(item)
+                prices_to_show = []
+                for thing in data:
+                    index = items.index(thing)
+                    prices_to_show.append(prices[index])
+                
+                print(prices_to_show)
+            update(data)
+            update_price(prices_to_show)
+        def update(data):
+            self.actual.delete(0, 'end')
+            for item in data:
+                self.actual.insert('end', item.capitalize())
+        def update_price(data):
+            self.price.delete(0,"end")
+            for item in data:
+                self.price.insert("end",item)
+        entry = Entry(self)
+        entry.place(width=420,x=60,y=5)
+        entry.bind('<KeyRelease>', Scankey)
+        searchlabel = Label(text="Search:")
+        searchlabel.place(x=5,y=5)
+        def add_to_cart():
+            for i in self.actual.curselection():
+                print(self.actual.get(i))
+        button = Button(text="Add to Cart",command=add_to_cart)
+        button.place(width=475,x=5,y=390)
+
+    def yscroll1(self, *args):
+        if self.price.yview() != self.actual.yview():
+            self.price.yview_moveto(args[0])
+        self.scrollbar.set(*args)
+
+    def yscroll2(self, *args):
+        if self.actual.yview() != self.price.yview():
+            self.actual.yview_moveto(args[0])
+        self.scrollbar.set(*args)
+
+    def yview(self, *args):
+        self.actual.yview(*args)
+        self.price.yview(*args)
 
 
 class Admin(tk.Frame):
