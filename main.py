@@ -4,6 +4,23 @@ from tkinter import *
 import enchant
 d = enchant.Dict("en_GB")
 from tkinter import messagebox
+import json
+import os
+
+def on_close():
+    if "cart.json" in os.listdir():
+        os.remove("cart.json")
+    if "combined.json" in os.listdir():
+        os.remove("combined.json")
+
+def close():
+    if "cart.json" in os.listdir():
+        os.remove("cart.json")
+    if "combined.json" in os.listdir():
+        os.remove("combined.json")
+    app.destroy()
+
+
 class App(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
@@ -61,7 +78,7 @@ class StartPage(tk.Frame):
             admin["state"] = NORMAL
             if not valid == None:
                 if valid == True:
-                    print("Password Was Correct")
+
                     master.switch_frame(Admin)
 
 
@@ -71,7 +88,7 @@ class StartPage(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
         label = tk.Label(self, text="Select Mode",font=("Arial", 25))
-        user = tk.Button(self, text="User", command=lambda: master.switch_frame(User), font=("Arial", 16))
+        user = tk.Button(self, text="User", command=lambda:master.switch_frame(User), font=("Arial", 16))
         admin = tk.Button(self, text="Admin", command=final_check, font=("Arial", 16))
         label.grid(row=0,column=0,sticky="NSEW",padx = 50, pady = 60)
         user.grid(row=1,column=0,sticky="NSEW",padx = 50, pady = 60)
@@ -82,18 +99,6 @@ class User(tk.Frame):
         global items
         global prices
         tk.Frame.__init__(self, master)
-        class EditableListbox(tk.Listbox):
-            tk.Frame.__init__(self, master)
-            def __init__(self, master, **kwargs):
-                super().__init__(master, **kwargs)
-                self.edit_item = None
-                
-        class EditableListbox2(tk.Listbox):
-            tk.Frame.__init__(self, master)
-            def __init__(self, master, **kwargs):
-                super().__init__(master, **kwargs)
-                self.edit_item = None
-
 
         self.actual = Listbox(app)
         self.scrollbar = tk.Scrollbar(app, command=self.yview)
@@ -116,7 +121,7 @@ class User(tk.Frame):
 
         def Scankey(event):
             val = event.widget.get()
-            print(val)
+
             if val == '':
                 data = items
                 prices_to_show = prices
@@ -130,7 +135,7 @@ class User(tk.Frame):
                     index = items.index(thing)
                     prices_to_show.append(prices[index])
                 
-                print(prices_to_show)
+
             update(data)
             update_price(prices_to_show)
         def update(data):
@@ -146,12 +151,64 @@ class User(tk.Frame):
         entry.bind('<KeyRelease>', Scankey)
         searchlabel = Label(text="Search:")
         searchlabel.place(x=5,y=5)
+        def subtotal():
+            global items_in_basket
+            with open('cart.json') as f:
+                cart = json.load(f)
+            items_in_basket = []
+            for item in list(cart["items"]):
+                if cart["items"][item]["quantity"] == 1:
+                    items_in_basket.append(float(cart["items"][item]["price"]))
+                    
+                else:
+                    items_in_basket.append(float(cart["items"][item]["quantity"]) * float(cart["items"][item]["price"]))
+
+            subtotal_label["text"] = "Subtotal: " + str("{:.2f}".format(float(sum(list(map(float, items_in_basket))))))
         def add_to_cart():
+            global cart
+            with open("items.txt", encoding='utf8') as f:
+                items = f.read().split(",")
+            with open("prices.txt", encoding='utf8') as f:
+                prices = f.read().split(",")
+            combined = {"items":dict(zip(items, prices)),"cart": {"items":{}}}
+            
+            if not "cart.json" in os.listdir():
+                with open('cart.json',"w") as f:
+                    f.write('{"items":{}}')
+
+            with open('cart.json') as f:
+                cart = json.load(f)
+
             for i in self.actual.curselection():
-                print(self.actual.get(i))
+                if not self.actual.get(i).lower() in list(cart["items"]):
+                    cart["items"][self.actual.get(i).lower()] = {"price":combined["items"][str(self.actual.get(i).lower())],"quantity":1}
+                else:
+                    cart["items"][self.actual.get(i).lower()]["quantity"] = int(cart["items"][self.actual.get(i).lower()]["quantity"]) + 1
+                
+            with open('cart.json', 'w') as file:
+                file.write(json.dumps(cart))
+            combined["cart"] = cart
+            with open('combined.json', 'w') as file:
+                file.write(json.dumps(combined))
+            subtotal()
+        def cart_check():
+            if "cart.json" in os.listdir():
+                with open('cart.json') as f:
+                    cart = json.load(f)
+                if not list(cart["items"]) == []:
+                    master.switch_frame(Cart)
+                else:
+                    messagebox.showerror('Python Error', 'Error: Basket is Empty')
+            else:
+                messagebox.showerror('Python Error', 'Error: Basket is Empty')
+
         button = Button(text="Add to Cart",command=add_to_cart)
         button.place(width=475,x=5,y=390)
-
+        subtotal_label = Label(text="Subtotal")
+        subtotal_label.place(width=475,x=5,y=417.5)
+        cart = Button(text="Check Out",command=lambda:cart_check())
+        cart.place(width=475,x=5,y=440)
+        Button(text="Mode Select",command=lambda:master.switch_frame(StartPage)).place(width=475,x=5,y=470)
     def yscroll1(self, *args):
         if self.price.yview() != self.actual.yview():
             self.price.yview_moveto(args[0])
@@ -209,7 +266,6 @@ class Admin(tk.Frame):
                 self.insert(self.edit_item, new_data)
                 with open("items.txt", encoding='utf8') as f:
                     items = f.read().split(",")
-                    print(items)
                 items[index] = new_data
                 with open("items.txt","w+") as f:
                     f.write(",".join(items))
@@ -251,7 +307,6 @@ class Admin(tk.Frame):
                 self.insert(self.edit_item, new_data)
                 with open("prices.txt", encoding='utf8') as f:
                     items = f.read().split(",")
-                    print(items)
                 items[index] = new_data
                 with open("prices.txt","w+") as f:
                     f.write(",".join(items))
@@ -277,7 +332,6 @@ class Admin(tk.Frame):
 
         def Scankey(event):
             val = event.widget.get()
-            print(val)
             if val == '':
                 data = items
                 prices_to_show = prices
@@ -290,8 +344,6 @@ class Admin(tk.Frame):
                 for thing in data:
                     index = items.index(thing)
                     prices_to_show.append(prices[index])
-                
-                print(prices_to_show)
 
             update(data)
             update_price(prices_to_show)
@@ -309,6 +361,7 @@ class Admin(tk.Frame):
         searchlabel = Label(text="Search:")
         searchlabel.place(x=5,y=5)
         def insert(item,price,items):
+            price = str("{:.2f}".format(float(price)))
             try:
                 if d.check(item) == True and "".join(price.split(".")).isdigit():
                     if not item.lower() in items:
@@ -355,7 +408,7 @@ class Admin(tk.Frame):
         item_entry.place(width=295,x=5,y=400)
         price_entry = Entry(self)
         price_entry.place(width=130,x=305,y=400)
-        insert_btn = Button(text="Insert",command=lambda:insert(item_entry.get().strip(),price_entry.get().strip(),items))
+        insert_btn = Button(text="Insert",command=lambda:insert(item_entry.get().strip().lower(),price_entry.get().strip(),items))
         insert_btn.place(height=20,width=50,x=440,y=400)
         delete_btn = Button(text="Delete Selected",command=delete)
         delete_btn.place(width=490,x=5,y=430)
@@ -376,7 +429,124 @@ class Admin(tk.Frame):
         self.actual.yview(*args)
         self.price.yview(*args)
 
+class Cart(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        def pay():
+            pass
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(1, weight=1)
+        lb = Label(text= f"You Owe {str('{:.2f}'.format(float(sum(list(map(float, items_in_basket))))))}")
+        lb.place(width=490,x=5,y=5,height=40)
+        
+        def coin_count(amount, coin_name, coin_value):
+            num_coins = 0
+            
+            
+            while float(amount) >= float(coin_value):
+
+                num_coins += 1
+                float(amount) 
+                float(coin_value)
+                amount -= coin_value
+            if num_coins == 1 :
+                coinlist.append(f"{str(num_coins)} {str(coin_name)}")
+            elif num_coins > 1:
+                coinlist.append(f"{str(num_coins)} {str(coin_name)}s")
+            return amount
+        global coinlist
+        coinlist=[]
+        temp_amount = float(sum(list(map(float, items_in_basket))))
+        temp_amount = coin_count(temp_amount, "Fifty Pound", 50.00)
+        temp_amount = coin_count(temp_amount, "Twenty Pound", 20.00)
+        temp_amount = coin_count(temp_amount, "Ten Pound", 10.00)
+        temp_amount = coin_count(temp_amount, "Five Pound", 5.00)
+        temp_amount = coin_count(temp_amount, "Two Pound", 2.00)
+        temp_amount = coin_count(temp_amount, "Pound", 10)
+        temp_amount = coin_count(temp_amount, "50p", 0.50)
+        temp_amount = coin_count(temp_amount, "20p", 0.20)
+        temp_amount = coin_count(temp_amount, "5p", 0.05)
+        temp_amount = coin_count(temp_amount, "2p", 0.02)
+        temp_amount = coin_count(temp_amount, "1p", 0.01)
+        lb = Label(text=", ".join(coinlist))
+        lb.place(width=490,x=5,y=55,height=40)
+        button= Button(text="Done" ,command=close)
+        button.place(width=490,x=5,y=100,height=40)
+#i wouldnt look below the code is shit
+
+# class Cart(tk.Frame):
+
+#     def __init__(self, master):
+#         tk.Frame.__init__(self, master)
+#         super().__init__(master)
+#         def final_total(event,current_value):
+#             item_name = str(event.widget).split(".")[2]
+
+#             print(event.widget.get())
+#             with open('combined.json') as f:
+#                 combined = json.load(f)
+            
+#             with open('cart.json') as f:
+#                 cart = json.load(f)
+
+#             print(current_value,"not equal value")
+
+#             cart["items"][item_name]["quantity"] = int(current_value.get())
+#             print(current_value)
+#             with open('cart.json', 'w') as file:
+#                 file.write(json.dumps(cart))
+#             combined["cart"] = cart
+#             with open('combined.json', 'w') as file:
+#                 file.write(json.dumps(combined))
+#         def display_selected(event):
+
+#             item_name = str(event.widget).split(".")[2]
+#             print(item_name)
+#             lb=Label(self,text=f'You selected {current_vals[item_name].get()}', font=('sans-serif', 6),)
+#             lb.pack()
+#             print(current_vals[item_name].get())
+#         with open('cart.json') as f:
+#             cart = json.load(f)
+#             print(cart)
+#         y = 5
+#         displayed = []
+#         to_display = []
+    
+#         print(list(cart["items"]))
+#         for item in list(cart["items"]):
+#             print("item", item)
+#             if item not in displayed:
+#                 to_display.append(item)
+#                 print(item)
+#         print(displayed)
+#         current_vals = {}
+#         for item in to_display:
+#             if y > 480:
+#                 break
+#             Label(text=item).place(x=5,y=y)
+#             var = tk.StringVar()
+#             var.set(str(float(cart["items"][item]["quantity"])))
+#             current_vals[item] = var
+#             print(current_vals)
+#             #current_value = StringVar(value=str(float(((cart["items"][item]["quantity"])))))
+#             spin_box = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True)
+#             spin_box.bind("<Button-1>",lambda event: display_selected(event))
+#             spin_box.place(x=100,y=y)
+#             y += 25
+#             displayed.append(item)
+#         def oddblue(var,b,c):
+#             if len(var.get())%2 == 0:
+#                 lb = Label(text=var)
+#                 lb.place(x=400,y=80)
+#             else:
+
+#                 spin_box.update_idletasks()
+        #var.trace('w',oddblue)
+        #this is a very work in progress area
+            #need to add pages to accomodate more items to be added by admin
+
 app = App()
+app.protocol("WM_DELETE_WINDOW", close)
 app.iconbitmap(default='transparent.ico')
 app.title("Shitty Shop")
 app.geometry("500x500")
