@@ -1,22 +1,29 @@
-import os
-import tkinter as tk
-import tkinter
-from tkinter import Label
-from tkinter import Entry
-from tkinter import Button
-from tkinter import Listbox
-from tkinter import Toplevel
-from tkinter import DISABLED
-from tkinter import NORMAL
-from tkinter import END
-import enchant
-d = enchant.Dict("en_GB")
 import json
 import os
+import os
+import tkinter
+import tkinter as tk
+from tkinter import (
+    Button,
+    DISABLED,
+    END,
+    Entry,
+    Label,
+    Listbox,
+    NORMAL,
+    Spinbox,
+    Toplevel,
+)
 import tkinter.messagebox as messagebox
+
+import enchant
+
+d = enchant.Dict("en_GB")
+
+
 items_location = "items.txt"
 prices_location = "prices.txt"
-
+combined_location="items_and_prices.json"
 def on_close():
     if "cart.json" in os.listdir():
         os.remove("cart.json")
@@ -62,7 +69,6 @@ class StartPage(tk.Frame):
             password["justify"] = "center"
             password["text"] = "Input Password"
             password.place(x=10,y=30,width=180,height=30)
-            
             def check():
                 global valid
                 pswd = password.get()
@@ -88,10 +94,7 @@ class StartPage(tk.Frame):
             admin["state"] = NORMAL
             if not valid == None:
                 if valid == True:
-
                     master.switch_frame(Admin)
-
-
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -119,16 +122,14 @@ class User(tk.Frame):
         self.scrollbar.place(x=480, y=40,height=340)
         self.price.place(height=340,width=100,x=380,y=40)
 
-        with open(items_location, encoding="utf8") as f:
-            items = f.read().split(",")
+        with open(combined_location) as f:
+            combined = json.load(f)
+            items = list(combined)
+            prices = list(combined.values())
         for i in items:
-            self.actual.insert("end", i.capitalize())
-
-        with open(prices_location, encoding="utf8") as f:
-            prices = f.read().split(",")
-        for i in prices:
-            self.price.insert("end", i)
-
+            self.actual.insert("end", i.title())
+            self.price.insert("end", prices[items.index(i)])
+            
         def Scankey(event):
             val = event.widget.get()
 
@@ -151,7 +152,7 @@ class User(tk.Frame):
         def update(data):
             self.actual.delete(0, "end")
             for item in data:
-                self.actual.insert("end", item.capitalize())
+                self.actual.insert("end", item.title())
         def update_price(data):
             self.price.delete(0,"end")
             for item in data:
@@ -169,38 +170,40 @@ class User(tk.Frame):
             for item in list(cart["items"]):
                 if cart["items"][item]["quantity"] == 1:
                     items_in_basket.append(float(cart["items"][item]["price"]))
-                    
                 else:
                     items_in_basket.append(float(cart["items"][item]["quantity"]) * float(cart["items"][item]["price"]))
 
             subtotal_label["text"] = "Subtotal: " + str("{:.2f}".format(float(sum(list(map(float, items_in_basket))))))
         def add_to_cart():
-            global cart
-            with open(items_location, encoding="utf8") as f:
-                items = f.read().split(",")
-            with open(prices_location, encoding="utf8") as f:
-                prices = f.read().split(",")
-            combined = {"items":dict(zip(items, prices)),"cart": {"items":{}}}
-            
-            if not "cart.json" in os.listdir():
-                with open("cart.json","w") as f:
-                    f.write('{"items":{}}')
-
-            with open("cart.json") as f:
-                cart = json.load(f)
-
+            selected = []
             for i in self.actual.curselection():
-                if not self.actual.get(i).lower() in list(cart["items"]):
-                    cart["items"][self.actual.get(i).lower()] = {"price":combined["items"][str(self.actual.get(i).lower())],"quantity":1}
-                else:
-                    cart["items"][self.actual.get(i).lower()]["quantity"] = int(cart["items"][self.actual.get(i).lower()]["quantity"]) + 1
+                selected.append(i)
+            if not selected == []:
+                global cart
+                with open(combined_location) as f:
+                    combined = json.load(f)
                 
-            with open("cart.json", "w") as file:
-                file.write(json.dumps(cart))
-            combined["cart"] = cart
-            with open("combined.json", "w") as file:
-                file.write(json.dumps(combined))
-            subtotal()
+                if not "cart.json" in os.listdir():
+                    with open("cart.json","w") as f:
+                        f.write('{"items":{}}')
+
+                with open("cart.json") as f:
+                    cart = json.load(f)
+
+                for i in self.actual.curselection():
+                    if not self.actual.get(i).lower() in list(cart["items"]):
+                        cart["items"][self.actual.get(i).lower()] = {"price":combined[str(self.actual.get(i).lower())],"quantity":1}
+                    else:
+                        cart["items"][self.actual.get(i).lower()]["quantity"] = int(cart["items"][self.actual.get(i).lower()]["quantity"]) + 1
+                    
+                with open("cart.json", "w") as file:
+                    file.write(json.dumps(cart))
+                combined["cart"] = cart
+                with open("combined.json", "w") as file:
+                    file.write(json.dumps(combined))
+                subtotal()
+            else:
+                messagebox.showerror("Python Error", "Error: Nothing Selected")
         def cart_check():
             if "cart.json" in os.listdir():
                 with open("cart.json") as f:
@@ -219,6 +222,8 @@ class User(tk.Frame):
         cart = Button(text="Check Out",command=lambda:cart_check())
         cart.place(width=475,x=5,y=440)
         Button(text="Mode Select",command=lambda:master.switch_frame(StartPage)).place(width=475,x=5,y=470)
+        
+        
     def yscroll1(self, *args):
         if self.price.yview() != self.actual.yview():
             self.price.yview_moveto(args[0])
@@ -232,6 +237,7 @@ class User(tk.Frame):
     def yview(self, *args):
         self.actual.yview(*args)
         self.price.yview(*args)
+    
 
 
 class Admin(tk.Frame):
@@ -273,12 +279,15 @@ class Admin(tk.Frame):
             def accept_edit(self, event):
                 new_data = event.widget.get()
                 self.delete(self.edit_item)
-                self.insert(self.edit_item, new_data)
-                with open(items_location, encoding="utf8") as f:
-                    items = f.read().split(",")
-                items[index] = new_data
-                with open(items_location,"w+") as f:
-                    f.write(",".join(items))
+                self.insert(self.edit_item, new_data.title())
+                with open(combined_location) as f:
+                    combined = json.load(f)
+                    items = list(combined)
+                    prices = list(combined.values())
+                    items[index] = new_data.lower()
+                    combined = dict(zip(items, prices))
+                    loc = open(combined_location, "w")
+                    json.dump(combined,loc)
                 event.widget.destroy()
         class EditableListbox2(tk.Listbox):
             tk.Frame.__init__(self, master)
@@ -315,11 +324,14 @@ class Admin(tk.Frame):
                 new_data = event.widget.get()
                 self.delete(self.edit_item)
                 self.insert(self.edit_item, new_data)
-                with open(prices_location, encoding="utf8") as f:
-                    items = f.read().split(",")
-                items[index] = new_data
-                with open(prices_location,"w+") as f:
-                    f.write(",".join(items))
+                with open(combined_location) as f:
+                    combined = json.load(f)
+                    items = list(combined)
+                    prices = list(combined.values())
+                    prices[index] = new_data.lower()
+                    combined = dict(zip(items, prices))
+                    loc = open(combined_location, "w")
+                    json.dump(combined,loc)
                 event.widget.destroy()
 
         self.actual = EditableListbox(app)
@@ -330,15 +342,13 @@ class Admin(tk.Frame):
         self.actual.place(height=340,width=375,x=5,y=40)
         self.scrollbar.place(x=480, y=40,height=340)
         self.price.place(height=340,width=100,x=380,y=40)
-        with open(items_location, encoding="utf8") as f:
-            items = f.read().split(",")
+        with open(combined_location) as f:
+            combined = json.load(f)
+            items = list(combined)
+            prices = list(combined.values())
         for i in items:
-            self.actual.insert("end", i.capitalize())
-
-        with open(prices_location, encoding="utf8") as f:
-            prices = f.read().split(",")
-        for i in prices:
-            self.price.insert("end", i)
+            self.actual.insert("end", i.title())
+            self.price.insert("end", prices[items.index(i)])
 
         def Scankey(event):
             val = event.widget.get()
@@ -360,7 +370,7 @@ class Admin(tk.Frame):
         def update(data):
             self.actual.delete(0, "end")
             for item in data:
-                self.actual.insert("end", item.capitalize())
+                self.actual.insert("end", item.title())
         def update_price(data):
             self.price.delete(0,"end")
             for item in data:
@@ -371,23 +381,22 @@ class Admin(tk.Frame):
         searchlabel = Label(text="Search:")
         searchlabel.place(x=5,y=5)
         def insert(item,price,items):
-            price = str("{:.2f}".format(float(price)))
+
             try:
                 if d.check(item) == True and "".join(price.split(".")).isdigit():
-                    if not item.lower() in items:
-                        self.actual.insert("end", item.capitalize())
-                        self.price.insert("end", price)
+                    if not item.lower() in items and not item in items:
+                        self.actual.insert("end", item.title())
+                        self.price.insert("end", str("{:.2f}".format(float(price))))
                         self.actual.see(self.actual.size())
-                        with open(items_location, encoding="utf8") as f:
-                            items = f.read().split(",")
-                        items.append(item)
-                        with open(items_location,"w+") as f:
-                            f.write(",".join(items))
-                        with open(prices_location, encoding="utf8") as f:
-                            prices = f.read().split(",")
-                        prices.append(price)
-                        with open(prices_location,"w+") as f:
-                            f.write(",".join(prices))
+                        with open(combined_location) as f:
+                            combined = json.load(f)
+                            items = list(combined)
+                            prices = list(combined.values())
+                            items.append(item.lower())
+                            prices.append(str("{:.2f}".format(float(price))))
+                            combined = dict(zip(items, prices))
+                            loc = open(combined_location, "w")
+                            json.dump(combined,loc)
                         item_entry.delete(0,END)
                         price_entry.delete(0,END)
                     else:
@@ -402,17 +411,16 @@ class Admin(tk.Frame):
             for i in self.actual.curselection():
                 self.actual.delete(i)
                 self.price.delete(i)
-                with open(items_location, encoding="utf8") as f:
-                    items = f.read().split(",")
+                with open(combined_location) as f:
+                    combined = json.load(f)
+                    items = list(combined)
+                    prices = list(combined.values())
                     del items[i]
-                with open(items_location,"w+") as f:
-                    f.write(",".join(items))
-                with open(prices_location, encoding="utf8") as f:
-                    prices = f.read().split(",")
                     del prices[i]
-                with open(prices_location,"w+") as f:
-                    f.write(",".join(prices))
-                
+                    combined = dict(zip(items, prices))
+                    loc = open(combined_location, "w")
+                    json.dump(combined,loc)
+                    f.close()
 
         item_entry = Entry(self)
         item_entry.place(width=295,x=5,y=400)
@@ -467,6 +475,7 @@ class Cart(tk.Frame):
         global coinlist
         coinlist=[]
         temp_amount = float(sum(list(map(float, items_in_basket))))
+        print(temp_amount)
         temp_amount = coin_count(temp_amount, "Fifty Pound", 50.00)
         temp_amount = coin_count(temp_amount, "Twenty Pound", 20.00)
         temp_amount = coin_count(temp_amount, "Ten Pound", 10.00)
@@ -480,10 +489,61 @@ class Cart(tk.Frame):
         temp_amount = coin_count(temp_amount, "1p", 0.01)
         lb = Label(text=", ".join(coinlist))
         lb.place(width=490,x=5,y=55,height=40)
-        button= Button(text="Done" ,command=close)
-        button.place(width=490,x=5,y=100,height=40)
+        back = Button(text="Back" ,command=lambda:master.switch_frame(Detailed_Cart))
+        back.place(width=490,x=5,y=100,height=40)
+        done = Button(text="Done" ,command=close)
+        done.place(width=490,x=5,y=180,height=40)
 #i wouldnt look below the code is shit
+class Detailed_Cart(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        with open("cart.json") as f:
+            cart = json.load(f)
+            print(cart)
+        y = 5
+        displayed = []
+        to_display = []
+        def pressed(m):
+            print(m," = ",variables.get(m).get())
 
+        for item in list(cart["items"]):
+            if item not in displayed:
+                to_display.append(item)
+        pages_required = len(to_display)/40
+        print(pages_required)
+        current_vals = {}
+        variables = {}
+        if pages_required <= 1:
+            for item in to_display:
+                var = tk.StringVar()
+                var.set(str(float(cart["items"][item]["quantity"])))
+                current_vals[item] = var
+                variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                if y > 480:
+                    y=5
+                    break
+                Label(text=item.title()).place(x=5,y=y)
+                variables.get(item).place(x=100,y=y)
+                y += 25
+                displayed.append(item)
+            to_display = []
+            for item in list(cart["items"]):
+                if item not in displayed:
+                    to_display.append(item)
+            for item in to_display:
+                var = tk.StringVar()
+                var.set(str(float(cart["items"][item]["quantity"])))
+                current_vals[item] = var
+                variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                if y > 480:
+                    break
+                Label(text=item.title()).place(x=250,y=y)
+                variables.get(item).place(x=350,y=y)
+                y += 25
+                displayed.append(item)
+        else:
+            pass
+            #delete current ones and add next set
 # class Cart(tk.Frame):
 
 #     def __init__(self, master):
@@ -560,5 +620,5 @@ app.protocol("WM_DELETE_WINDOW", close)
 app.iconbitmap(default="transparent.ico")
 app.title("Shitty Shop")
 app.geometry("500x500")
-app.resizable(False,False)
+#app.resizable(False,False)
 app.mainloop()
