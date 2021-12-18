@@ -209,7 +209,7 @@ class User(tk.Frame):
                 with open("cart.json") as f:
                     cart = json.load(f)
                 if not list(cart["items"]) == []:
-                    master.switch_frame(Cart)
+                    master.switch_frame(Detailed_Cart)
                 else:
                     messagebox.showerror("Python Error", "Error: Basket is Empty")
             else:
@@ -493,13 +493,22 @@ class Cart(tk.Frame):
         back.place(width=490,x=5,y=100,height=40)
         done = Button(text="Done" ,command=close)
         done.place(width=490,x=5,y=180,height=40)
-#i wouldnt look below the code is shit
+#i wouldnt look below the code is dodgy
 class Detailed_Cart(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         with open("cart.json") as f:
             cart = json.load(f)
             print(cart)
+        def next_page(labels,displayed):
+            for widgets in self.winfo_children():
+                widgets.destroy()
+            for item in list(labels):
+                labels.get(item).destroy()
+            to_display = []
+            for item in list(cart["items"]):
+                if item not in displayed:
+                    to_display.append(item)
         y = 5
         displayed = []
         to_display = []
@@ -513,17 +522,20 @@ class Detailed_Cart(tk.Frame):
         print(pages_required)
         current_vals = {}
         variables = {}
+        labels = {}
         if pages_required <= 1:
             for item in to_display:
                 var = tk.StringVar()
                 var.set(str(float(cart["items"][item]["quantity"])))
                 current_vals[item] = var
                 variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                variables.get(item).place(x=100,y=y)
                 if y > 480:
                     y=5
                     break
-                Label(text=item.title()).place(x=5,y=y)
-                variables.get(item).place(x=100,y=y)
+                labels[item] = Label(text=item.title())
+                labels.get(item).place(x=5,y=y)
+                
                 y += 25
                 displayed.append(item)
             to_display = []
@@ -535,13 +547,18 @@ class Detailed_Cart(tk.Frame):
                 var.set(str(float(cart["items"][item]["quantity"])))
                 current_vals[item] = var
                 variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                variables.get(item).place(x=100,y=y)
                 if y > 480:
+                    y=5
                     break
-                Label(text=item.title()).place(x=250,y=y)
-                variables.get(item).place(x=350,y=y)
+                labels[item] = Label(text=item.title())
+                labels.get(item).place(x=5,y=y)
                 y += 25
                 displayed.append(item)
+            Button(text="Previous Page").place(x=5,width=240,y=470)
+            Button(text="Next Page",command=lambda:next_page(labels,displayed)).place(x=255,width=240,y=470)
         else:
+
             pass
             #delete current ones and add next set
 # class Cart(tk.Frame):
