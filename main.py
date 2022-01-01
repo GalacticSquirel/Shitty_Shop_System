@@ -3,6 +3,7 @@ import os
 import os
 import tkinter
 import tkinter as tk
+import numpy as np
 from tkinter import (
     Button,
     DISABLED,
@@ -497,138 +498,133 @@ class Cart(tk.Frame):
 class Detailed_Cart(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
+        
+        print("setting")
+        
+
         with open("cart.json") as f:
             cart = json.load(f)
             print(cart)
-        def next_page(labels,displayed):
+        def clear_page(labels,variables):
             for widgets in self.winfo_children():
-                widgets.destroy()
+                widgets.place_forget()
             for item in list(labels):
-                labels.get(item).destroy()
-            to_display = []
-            for item in list(cart["items"]):
-                if item not in displayed:
-                    to_display.append(item)
+                labels.get(item).place_forget()
+        
+        def switch_page(curr_page,target_page,labels,variables,pages):
+            print(target_page,"sw")
+            clear_page(labels,variables)
+            
+            y=5
+            x=5
+            try:
+                fcolumn = pages[target_page][0]
+                
+                for item in fcolumn:
+                    variables.get(item).place(x=x+100,y=y)
+                    labels.get(item).place(x=x,y=y)
+                    y += 25
+                scolumn = pages[target_page][1]
+                y=5
+                x=250
+                for item in scolumn:
+                    variables.get(item).place(x=x+100,y=y)
+                    labels.get(item).place(x=x,y=y)
+                    y += 25
+            #except IndexError:
+                #messagebox.showerror("Python Error", "Error: The Page You Are Trying To Go To Does Not Exist")
+            except Exception as e:
+                print("ERROR ",e)
+        def target_set(addorminus,target_page,curr_page,labels,variables,pages):
+            
+            if addorminus == 1:
+                print(target_page,"f")
+                target_page = int(target_page) + 1
+                print("add " , target_page)
+            else:
+                print(target_page,"s")
+                target_page = int(target_page) - 1
+                print("minus ", target_page)
+            print(target_page,"q")
+            switch_page(curr_page,target_page,labels,variables,pages)
+            print(target_page,"e")
+            
         y = 5
-        displayed = []
-        to_display = []
+        to_display = list(cart["items"])
         def pressed(m):
             print(m," = ",variables.get(m).get())
+        lists = [to_display[i:i+18] for i in range(0,len(to_display),18)]
 
-        for item in list(cart["items"]):
-            if item not in displayed:
-                to_display.append(item)
-        pages_required = len(to_display)/40
-        print(pages_required)
+
         current_vals = {}
         variables = {}
         labels = {}
-        if pages_required <= 1:
-            for item in to_display:
-                var = tk.StringVar()
-                var.set(str(float(cart["items"][item]["quantity"])))
-                current_vals[item] = var
-                variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
-                variables.get(item).place(x=100,y=y)
-                if y > 480:
-                    y=5
-                    break
-                labels[item] = Label(text=item.title())
-                labels.get(item).place(x=5,y=y)
-                
-                y += 25
-                displayed.append(item)
-            to_display = []
-            for item in list(cart["items"]):
-                if item not in displayed:
-                    to_display.append(item)
-            for item in to_display:
-                var = tk.StringVar()
-                var.set(str(float(cart["items"][item]["quantity"])))
-                current_vals[item] = var
-                variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
-                variables.get(item).place(x=100,y=y)
-                if y > 480:
-                    y=5
-                    break
-                labels[item] = Label(text=item.title())
-                labels.get(item).place(x=5,y=y)
-                y += 25
-                displayed.append(item)
-            Button(text="Previous Page").place(x=5,width=240,y=470)
-            Button(text="Next Page",command=lambda:next_page(labels,displayed)).place(x=255,width=240,y=470)
+        y=5
+        x=5
+        if len(lists) <= 2:
+            try:
+                for i in lists:
+                    for item in i:
+                        
+                        var = tk.StringVar()
+                        var.set(str(float(cart["items"][item]["quantity"])))
+                        current_vals[item] = var
+                        variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                        
+                        labels[item] = Label(text=item.title())
+                for item in lists[0]:
+                    variables.get(item).place(x=x+100,y=y)
+                    labels.get(item).place(x=x,y=y)
+                    y += 25
+                y = 5
+                x = 250
+                for item in lists[1]:
+                    variables.get(item).place(x=x+100,y=y)
+                    labels.get(item).place(x=x,y=y)
+                    y += 25
+            except:
+                pass
         else:
 
-            pass
-            #delete current ones and add next set
-# class Cart(tk.Frame):
-
-#     def __init__(self, master):
-#         tk.Frame.__init__(self, master)
-#         super().__init__(master)
-#         def final_total(event,current_value):
-#             item_name = str(event.widget).split(".")[2]
-
-#             print(event.widget.get())
-#             with open("combined.json") as f:
-#                 combined = json.load(f)
+            pages = [lists[i:i+2] for i in range(0,len(lists),2)]
+            curr_page = 0
             
-#             with open("cart.json") as f:
-#                 cart = json.load(f)
+            
+            for i in lists:
+                for item in i:
+                    
+                    var = tk.StringVar()
+                    var.set(str(float(cart["items"][item]["quantity"])))
+                    current_vals[item] = var
+                    variables[item] = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True,command=lambda m=item:pressed(m))
+                    labels[item] = Label(text=item.title())
+            
+            switch_page(curr_page,0,labels,variables,pages)
+            Button(text="Previous Page",command=lambda:target_set(0,curr_page,0,labels,variables,pages)).place(x=5,width=240,y=470)
+            Button(text="Next Page",command=lambda:target_set(1,curr_page,0,labels,variables,pages)).place(x=255,width=240,y=470)
+            
+            #         for l in lists:
+            #             for item in l:
+                            
+            #                 d.append(item)
+            #                 print(item)
+            #             variables.get(item).place(x=x+100,y=y)
+            #             labels.get(item).place(x=x,y=y)
+            #             print(d)
+            #             pages_dict[pages.index(page)] = d
+            # print(pages_dict)
+                    
+            y = 5
+            x = 250
+            #self.curr_page += 1
+            #for item in pages[self.curr_page]:
+            #    variables.get(item).place(x=x+100,y=y)
+            #    labels.get(item).place(x=x,y=y)
+            #    y += 25
 
-#             print(current_value,"not equal value")
+            """ TARGET ISNT FUCKING WORKING FIX IT - maybe rework by implementing two seperate functions one for prev page and one for next page"""
+            #delete current ones and add next set
 
-#             cart["items"][item_name]["quantity"] = int(current_value.get())
-#             print(current_value)
-#             with open("cart.json", "w") as file:
-#                 file.write(json.dumps(cart))
-#             combined["cart"] = cart
-#             with open("combined.json", "w") as file:
-#                 file.write(json.dumps(combined))
-#         def display_selected(event):
-
-#             item_name = str(event.widget).split(".")[2]
-#             print(item_name)
-#             lb=Label(self,text=f"You selected {current_vals[item_name].get()}", font=("sans-serif", 6),)
-#             lb.pack()
-#             print(current_vals[item_name].get())
-#         with open("cart.json") as f:
-#             cart = json.load(f)
-#             print(cart)
-#         y = 5
-#         displayed = []
-#         to_display = []
-    
-#         print(list(cart["items"]))
-#         for item in list(cart["items"]):
-#             print("item", item)
-#             if item not in displayed:
-#                 to_display.append(item)
-#                 print(item)
-#         print(displayed)
-#         current_vals = {}
-#         for item in to_display:
-#             if y > 480:
-#                 break
-#             Label(text=item).place(x=5,y=y)
-#             var = tk.StringVar()
-#             var.set(str(float(cart["items"][item]["quantity"])))
-#             current_vals[item] = var
-#             print(current_vals)
-#             #current_value = StringVar(value=str(float(((cart["items"][item]["quantity"])))))
-#             spin_box = Spinbox(self,name=item,from_=0,to=30,textvariable=current_vals[item],wrap=True)
-#             spin_box.bind("<Button-1>",lambda event: display_selected(event))
-#             spin_box.place(x=100,y=y)
-#             y += 25
-#             displayed.append(item)
-#         def oddblue(var,b,c):
-#             if len(var.get())%2 == 0:
-#                 lb = Label(text=var)
-#                 lb.place(x=400,y=80)
-#             else:
-
-#                 spin_box.update_idletasks()
-        #var.trace("w",oddblue)
         #this is a very work in progress area
             #need to add pages to accomodate more items to be added by admin
 

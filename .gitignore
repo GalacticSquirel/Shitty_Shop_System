@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitattributes
+!.gitignore
+!items_and_prices.json
+!main.py
+!transparent.ico
+# etc...
+
+# ...even if they are in subdirectories
+!*/
